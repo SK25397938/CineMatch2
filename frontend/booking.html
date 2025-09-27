@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Book Tickets</title>
+  <link rel="stylesheet" href="styles.css"> <!-- optional -->
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #f8f8f8; }
+    nav { background: #222; color: #fff; padding: 1rem; font-size: 1.5rem; }
+    .container {
+      max-width: 900px;
+      margin: 2rem auto;
+      background: white;
+      padding: 2rem;
+      border-radius: 10px;
+      display: flex;
+      gap: 2rem;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .left, .right { flex: 1; }
+    .left img { width: 100%; border-radius: 8px; }
+    .left h2 { text-align: center; margin-top: 0.5rem; }
+    .form-group { margin-bottom: 1rem; }
+    .form-group label { display: block; margin-bottom: 0.3rem; font-weight: bold; }
+    .form-group input, .form-group select {
+      width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 5px;
+    }
+    .payment { margin-top: 1.5rem; font-weight: bold; }
+    .actions { margin-top: 1.5rem; display: flex; gap: 1rem; }
+    .actions button {
+      flex: 1; padding: 0.7rem; border: none; border-radius: 5px;
+      cursor: pointer; font-size: 1rem;
+    }
+    .back-btn { background: #ccc; }
+    .confirm-btn { background: #28a745; color: white; }
+  </style>
+</head>
+<body>
+  <nav>🎬 My Movie Site</nav>
+
+  <div class="container">
+    <!-- Left movie card -->
+    <div class="left">
+      <img id="moviePoster" src="" alt="Movie Poster">
+      <h2 id="movieTitle">Loading...</h2>
+    </div>
+
+    <!-- Right booking form -->
+    <div class="right">
+      <div class="form-group">
+        <label for="customerName">Your Name</label>
+        <input type="text" id="customerName" required>
+      </div>
+      <div class="form-group">
+        <label for="contact">Contact Info</label>
+        <input type="text" id="contact" required>
+      </div>
+      <div class="form-group">
+        <label for="seatRow1">Choose Seat (Row 1)</label>
+        <select id="seatRow1">
+          <option value="">--Select Seat--</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="seatRow2">Choose Seat (Row 2)</label>
+        <select id="seatRow2">
+          <option value="">--Select Seat--</option>
+        </select>
+      </div>
+
+      <div class="payment">PAYMENT: CASH ONLY</div>
+
+      <div class="actions">
+        <button class="back-btn" onclick="window.location.href='index.html'">⬅ Go Back</button>
+        <button class="confirm-btn" id="confirmBtn">✅ Confirm Booking</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Populate seat dropdowns
+    function populateSeats() {
+      const row1 = document.getElementById("seatRow1");
+      const row2 = document.getElementById("seatRow2");
+      for (let i = 1; i <= 10; i++) {
+        row1.innerHTML += `<option value="1-${i}">Row 1 - Seat ${i}</option>`;
+        row2.innerHTML += `<option value="2-${i}">Row 2 - Seat ${i}</option>`;
+      }
+    }
+    populateSeats();
+
+    // Get movie_id from query param
+    const params = new URLSearchParams(window.location.search);
+    const movieId = params.get("movie_id");
+
+    let movieData = null;
+
+    // Load movie details
+    async function loadMovie() {
+      try {
+        const res = await fetch(`http://127.0.0.1:5000/movie/${movieId}`);
+        movieData = await res.json();
+        document.getElementById("moviePoster").src =
+          "https://image.tmdb.org/t/p/w500" + movieData.poster_path;
+        document.getElementById("movieTitle").innerText = movieData.title;
+      } catch (err) {
+        console.error("Error loading movie:", err);
+      }
+    }
+    loadMovie();
+
+    // Handle booking confirm
+   // Handle booking confirm
+  document.getElementById("confirmBtn").addEventListener("click", async () => {
+    const name = document.getElementById("customerName").value.trim();
+    const contact = document.getElementById("contact").value.trim();
+    const seat1 = document.getElementById("seatRow1").value;
+    const seat2 = document.getElementById("seatRow2").value;
+
+    if (!name || !contact || (!seat1 && !seat2)) {
+      alert("Please fill all details and select a seat.");
+      return;
+    }
+
+    const seat = seat1 || seat2;
+    const [row, number] = seat.split("-");
+
+    try {
+      const res = await fetch("http://127.0.0.1:5000/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          movie_id: parseInt(movieId),  // ✅ ensure integer
+          title: movieData.title,
+          poster_path: movieData.poster_path,
+          customer_name: name,
+          contact: contact,
+          seat_row: row,
+          seat_number: number
+        })
+      });
+      const data = await res.json();
+
+      if (data.success) {  // ✅ check backend's "success"
+        alert("Booking confirmed!");
+        window.location.href = "index.html";
+      } else {
+        alert(data.message || "Booking failed."); // ✅ use message field
+      }
+    } catch (err) {
+      console.error("Booking error:", err);
+      alert("Error booking ticket.");
+    }
+  });
+  </script>
+</body>
+</html>
